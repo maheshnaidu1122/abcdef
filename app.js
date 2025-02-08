@@ -164,7 +164,10 @@ app.use((req, res, next) => {
 app.use('/campground', camprouter);
 app.use('/campground/:id/reviews', revrouter);
 app.use('/', userrouter);
-
+app.get('/', (req, res) => {
+    console.log('Root route hit');
+    res.render('home');  // Make sure home.ejs exists in your 'views' directory
+});
 // Error handling middleware
 app.use((err, req, res, next) => {
     const { statusCode = 500, message = "Something went wrong!" } = err;
