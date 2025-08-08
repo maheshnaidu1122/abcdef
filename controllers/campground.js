@@ -11,41 +11,42 @@ module.exports.index=async (req, res, next) => {
 module.exports.new=async (req, res) => {
     res.render('campgrounds/new');
 };
-module.exports.createcamp=async (req, res, next) => {
-    const { title, image,price, description } = req.body;
-    const {location}=req.body;
+module.exports.createcamp = async (req, res, next) => {
+    const { title, image, price, description, location } = req.body;
+
+    // Step 1: Create camp instance
     const camp = new CampGround({ title, location, price, description });
+
+    // Step 2: Geocoding
     try {
         const geoData = await maptilerClient.geocoding.forward(location, { limit: 1 });
-        console.log('GeoData Response:', geoData);
-      
-        // Check if geoData contains valid features
         if (geoData && geoData.features && geoData.features.length > 0) {
-          // Access the geometry from the first feature
-          campground.geometry = geoData.features[0].geometry;
-          console.log('Campground geometry:', campground.geometry);
+            camp.geometry = geoData.features[0].geometry;
         } else {
-          console.log('No geocoding results found for the location');
+            console.log('No geocoding results found for the location');
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Geocoding error:', error);
-      }
-     //camp.geometry=geoData.features[0].geometry;
-     const imgs = req.files.map(f => ({ url: f.path, filename: f.filename }));
-     campground.image.push(...imgs);
-     await campground.save();
-     if (req.body.deleteImages) {
-         for (let filename of req.body.deleteImages) {
-             await cloudinary.uploader.destroy(filename);
-         }
-         await campground.updateOne({ $pull: { image: { filename: { $in: req.body.deleteImages } } } })
-     }
+    }
 
-    camp.author = req.user._id; // Set the logged-in user as the author
-    await camp.save(); // Save the campground
+    // Step 3: Handle images
+    if (req.files) {
+        const imgs = req.files.map(f => ({ Url: f.path, filename: f.filename }));
+        camp.image.push(...imgs);
+    }
+
+    // Step 4: Assign author and save
+    if (req.user) {
+        camp.author = req.user._id;
+    }
+
+    await camp.save();
+
+    // Step 5: Flash and redirect
     req.flash('success', 'Successfully created a new campground!');
-    res.redirect(`/campground/${camp._id}`); // Redirect to the new campground's page
-}
+    res.redirect(`/campground/${camp._id}`);
+};
+
 module.exports.show=async (req, res, next) => {
     const { id } = req.params;
 
